@@ -5,6 +5,12 @@ namespace App\Service;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\Validation\Constraint\IssuedBy;
+use Lcobucci\JWT\Validation\Constraint\PermittedFor;
+use Lcobucci\Clock\SystemClock;
+use Lcobucci\JWT\Validation\Constraint\ValidAt;
+use Lcobucci\JWT\UnencryptedToken;
+use Lcobucci\JWT\Validation\Constraint\StrictValidAt;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class JwtService
@@ -27,8 +33,10 @@ class JwtService
     {
         $now = new \DateTimeImmutable();
         $token = $this->config->builder()
+            ->permittedFor('brewery-symfony') // Set the audience
             ->issuedBy('brewery-symfony') 
             ->issuedAt($now)
+            ->canOnlyBeUsedAfter($now) // Set the "Not Before" claim
             ->expiresAt($now->modify('+1 hour'))
             ->withClaim('user', $payload)
             ->getToken($this->config->signer(), $this->config->signingKey());
@@ -40,14 +48,20 @@ class JwtService
     {
         try {
             $token = $this->config->parser()->parse($token);
+
+            if (!$token instanceof UnencryptedToken) {
+                throw new \InvalidArgumentException('Invalid token type.');
+            }
+
             $constraints = [
-                $this->config->constraints()->permittedFor('brewery-symfony'),
-                $this->config->constraints()->issuedBy('brewery-symfony'),
-                $this->config->constraints()->lessThan(new \DateTimeImmutable()),
+                new PermittedFor('brewery-symfony'),
+                new IssuedBy('brewery-symfony'),
+                new StrictValidAt(new SystemClock(new \DateTimeZone('UTC'))),
             ];
-            $this->config->validator()->assert($token, ...$constraints);
+            $this->config->validator()->assert($token, ...$constraints);            
             return $token->claims()->get('user');
         } catch (\Exception $e) {
+            var_dump($e);
             return null;
         }
     }

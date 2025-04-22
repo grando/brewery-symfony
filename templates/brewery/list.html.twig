@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Table with AJAX and Pagination (DataTables)</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Data Table (using DataTables with Token Auth)</h2>
+
+        <div class="form-group">
+            <label for="apiToken">API Token (Bearer Authorization):</label>
+            <input type="text" class="form-control" id="apiToken" placeholder="Enter your API token">
+        </div>
+
+        <table id="data-table" class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Website</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="3" class="text-center">Please enter an API token and click Reload Data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let dataTable = null;
+            const tokenStorageKey = 'apiToken';
+
+            // Load token from localStorage on page load
+            const storedToken = localStorage.getItem(tokenStorageKey);
+            console.log('Stored token:', storedToken); // Debugging line
+
+            if (storedToken) {
+                $('#apiToken').val(storedToken);
+                initializeDataTable(storedToken);
+            } else {
+                $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token and click Reload Data.</td></tr>');
+            }
+
+            function initializeDataTable(token) {
+                if ($.fn.DataTable.isDataTable('#data-table')) {
+                    dataTable.clear().destroy();
+                    $('#data-table tbody').empty().append('<tr><td colspan="3" class="text-center">Loading data...</td></tr>');
+                }
+
+                dataTable = $('#data-table').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: '{{ path('breweries_v1_list') }}',
+                        type: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        },
+                        data: function (d) {
+                            d.page = (d.start / d.length) + 1;
+                            d.per_page = d.length;
+                        },
+                        dataSrc: function(json) {
+                            console.log('Full JSON response:', json);
+                            console.log('Data source:', json.data || json);
+                            return json.data || [];
+                        },
+                        error: function(xhr, error, thrown) {
+                            console.error('Error fetching data:', xhr, error, thrown);
+                            $('#data-table tbody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data with provided token.</td></tr>');
+                            if ($.fn.DataTable.isDataTable('#data-table')) {
+                                dataTable.clear().draw(); // Clear the table on error
+                            }
+                        }
+                    },
+                    columns: [
+                        { data: 'id', title: 'ID' },
+                        { data: 'name', title: 'Name' },
+                        { data: 'brewery_type', title: 'Type' },
+                        { data: 'city', title: 'City' },
+                        { data: 'state', title: 'State' },
+                        { 
+                            data: 'website_url', 
+                            title: 'Website',
+                            render: function(data, type, row) {
+                                return data ? `<a href="${data}" target="_blank">${data}</a>` : 'N/A';
+                            }
+                        }
+                    ],
+                    pagingType: "simple_numbers",
+                    destroy: true,
+                    searching: false,
+                    ordering: false
+                });
+
+                // Clear the table and show a message if no data is returned
+                dataTable.on('draw', function() {
+                    if (dataTable.data().count() === 0) {
+                        $('#data-table tbody').html('<tr><td colspan="6" class="text-center">No data available.</td></tr>');
+                    }
+                });
+
+            }
+
+            // Sync token input with localStorage and automatically load data
+            $('#apiToken').on('input', function() {
+                const newToken = $(this).val().trim();
+                localStorage.setItem(tokenStorageKey, newToken);
+                // Automatically reload data on token change
+                if (newToken) {
+                    initializeDataTable(newToken);
+                } else {
+                    if ($.fn.DataTable.isDataTable('#data-table')) {
+                        dataTable.clear().draw();
+                        $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token.</td></tr>');
+                    } else {
+                        $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token.</td></tr>');
+                    }
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

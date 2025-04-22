@@ -11,8 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route(name: 'breweries_v1_')]
-final class BreweryController extends AbstractController
+final class BreweryApiController extends AbstractController
 {
     public function __construct(
         private JwtService $jwtService,
@@ -23,7 +22,7 @@ final class BreweryController extends AbstractController
         $this->jwtService = $jwtService;
     }
 
-    #[Route('/api/login', name: 'login', methods: ['POST'])]
+    #[Route('/api/login', name: 'breweries_v1_login', methods: ['POST'])]
     public function login(
         Request $request, 
         UserService $userService,
@@ -43,7 +42,7 @@ final class BreweryController extends AbstractController
         return new JsonResponse(['token' => $token]);
     }
 
-    #[Route('/api/breweries', name: 'list', methods: ['GET'])]
+    #[Route('/api/breweries', name: 'breweries_v1_list', methods: ['GET'])]
     public function breweries(Request $request): JsonResponse
     {
         $authHeader = $request->headers->get('Authorization');
@@ -64,6 +63,21 @@ final class BreweryController extends AbstractController
 
         $breweries = $this->client->getBreweries($page, $perPage);
 
-        return new JsonResponse($breweries);
+        $data = [
+            'data' => $breweries,
+            "meta" => [
+                "current_page" => $page,
+                "per_page" => $perPage,
+                "total" => 1000,
+                "last_page" => ceil(1000 / $perPage)
+            ],
+            "links" => [
+                "first" => "/api/breweries?page=1&per_page=$perPage",
+                "last" => "/api/breweries?page=" . ceil(1000 / $perPage) . "&per_page=$perPage",
+                "next" => $page < ceil(1000 / $perPage) ? "/api/breweries?page=" . ($page + 1) . "&per_page=$perPage" : null,
+                "prev" => $page > 1 ? "/api/breweries?page=" . ($page - 1) . "&per_page=$perPage" : null,
+            ]                
+        ];
+        return new JsonResponse($data);
     }
 }
