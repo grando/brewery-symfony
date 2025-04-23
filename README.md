@@ -1,5 +1,6 @@
 
 # Running the project
+After cloning the project, you need to run the following command to build the Docker images and start the containers:
 ```bash
 docker compose up --build --remove-orphans --force-recreate
 ```
