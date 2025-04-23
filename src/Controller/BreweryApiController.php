@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\DataTableParser;
 use App\Service\JwtService;
 use App\Service\OpenBreweryClient;
 use App\Service\UserService;
@@ -43,7 +44,7 @@ final class BreweryApiController extends AbstractController
     }
 
     #[Route('/api/breweries', name: 'breweries_v1_list', methods: ['GET'])]
-    public function breweries(Request $request): JsonResponse
+    public function breweries(Request $request, DataTableParser $dataTableParser): JsonResponse
     {
         $authHeader = $request->headers->get('Authorization');
 
@@ -58,26 +59,35 @@ final class BreweryApiController extends AbstractController
             return new JsonResponse(['message' => 'Invalid token'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $page = $request->query->get('page', 1);
-        $perPage = $request->query->get('per_page', 10);
+        $params = $dataTableParser->parseDataTableRequest($request->query->all());
 
-        $breweries = $this->client->getBreweries($page, $perPage);
+        // get the data
+        if(!empty($params['search_term'])) {
+            $breweries = $this->client->getBreweriesSearch($params['page'], $params['per_page'], $params['search_term'], $params['sort']);
+        }else {
+            $breweries = $this->client->getBreweries($params['page'], $params['per_page'], $params['sort']);
+        }
+        
+        $total = $this->client->getBreweriesCount();
 
         $data = [
             'data' => $breweries,
             "meta" => [
-                "current_page" => $page,
-                "per_page" => $perPage,
-                "total" => 1000,
-                "last_page" => ceil(1000 / $perPage)
+                "current_page" => $params['page'],
+                "per_page" => $params['per_page'],
+                "total" => $total,
+                "last_page" => ceil($total / $params['per_page']),
             ],
             "links" => [
-                "first" => "/api/breweries?page=1&per_page=$perPage",
-                "last" => "/api/breweries?page=" . ceil(1000 / $perPage) . "&per_page=$perPage",
-                "next" => $page < ceil(1000 / $perPage) ? "/api/breweries?page=" . ($page + 1) . "&per_page=$perPage" : null,
-                "prev" => $page > 1 ? "/api/breweries?page=" . ($page - 1) . "&per_page=$perPage" : null,
-            ]                
+                "first" => "/api/breweries?page=1&per_page=".$params['per_page'],
+                "last" => "/api/breweries?page=" . ceil($total / $params['per_page']) . "&per_page=".$params['per_page'],
+                "next" => $params['page'] < ceil($total / $params['per_page']) ? "/api/breweries?page=" . ($params['page'] + 1) . "&per_page=".$params['per_page'] : null,
+                "prev" => $params['page'] > 1 ? "/api/breweries?page=" . ($params['page'] - 1) . "&per_page=".$params['per_page'] : null,
+            ],
+            "recordsTotal" => $total,    // Total number of breweries in the database
+            "recordsFiltered" => $total, // Total number of breweries after filtering                    
         ];
         return new JsonResponse($data);
     }
+
 }

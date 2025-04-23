@@ -8,8 +8,6 @@ services:
       - .:/var/www/html
     ports:
       - "8000:80"
-    environment:
-      APP_ENV: dev
 
 ###> doctrine/doctrine-bundle ###
 #  database:

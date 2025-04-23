@@ -50,13 +50,13 @@
                 $('#apiToken').val(storedToken);
                 initializeDataTable(storedToken);
             } else {
-                $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token and click Reload Data.</td></tr>');
+                $('#data-table tbody').html('<tr><td colspan="6" class="text-center">Please enter an API token.</td></tr>');
             }
 
             function initializeDataTable(token) {
                 if ($.fn.DataTable.isDataTable('#data-table')) {
                     dataTable.clear().destroy();
-                    $('#data-table tbody').empty().append('<tr><td colspan="3" class="text-center">Loading data...</td></tr>');
+                    $('#data-table tbody').empty().append('<tr><td colspan="6" class="text-center">Loading data...</td></tr>');
                 }
 
                 dataTable = $('#data-table').DataTable({
@@ -69,12 +69,8 @@
                             'Authorization': 'Bearer ' + token
                         },
                         data: function (d) {
-                            d.page = (d.start / d.length) + 1;
-                            d.per_page = d.length;
                         },
                         dataSrc: function(json) {
-                            console.log('Full JSON response:', json);
-                            console.log('Data source:', json.data || json);
                             return json.data || [];
                         },
                         error: function(xhr, error, thrown) {
@@ -86,23 +82,25 @@
                         }
                     },
                     columns: [
-                        { data: 'id', title: 'ID' },
-                        { data: 'name', title: 'Name' },
-                        { data: 'brewery_type', title: 'Type' },
-                        { data: 'city', title: 'City' },
-                        { data: 'state', title: 'State' },
-                        { 
-                            data: 'website_url', 
+                        { data: 'id', title: 'ID', orderable: true, searchable: true },
+                        { data: 'name', title: 'Name', orderable: true, searchable: true },
+                        { data: 'brewery_type', title: 'Type', orderable: true, searchable: true },
+                        { data: 'city', title: 'City', orderable: true, searchable: true },
+                        { data: 'state', title: 'State', orderable: true, searchable: true },
+                        {
+                            data: 'website_url',
                             title: 'Website',
                             render: function(data, type, row) {
                                 return data ? `<a href="${data}" target="_blank">${data}</a>` : 'N/A';
-                            }
+                            },
+                            orderable: true,
+                            searchable: true
                         }
                     ],
                     pagingType: "simple_numbers",
                     destroy: true,
-                    searching: false,
-                    ordering: false
+                    searching: true, // Enable global search
+                    ordering: true // Enable column sorting
                 });
 
                 // Clear the table and show a message if no data is returned
@@ -111,7 +109,6 @@
                         $('#data-table tbody').html('<tr><td colspan="6" class="text-center">No data available.</td></tr>');
                     }
                 });
-
             }
 
             // Sync token input with localStorage and automatically load data
@@ -124,14 +121,13 @@
                 } else {
                     if ($.fn.DataTable.isDataTable('#data-table')) {
                         dataTable.clear().draw();
-                        $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token.</td></tr>');
+                        $('#data-table tbody').html('<tr><td colspan="6" class="text-center">Please enter an API token.</td></tr>');
                     } else {
-                        $('#data-table tbody').html('<tr><td colspan="3" class="text-center">Please enter an API token.</td></tr>');
+                        $('#data-table tbody').html('<tr><td colspan="6" class="text-center">Please enter an API token.</td></tr>');
                     }
                 }
             });
-
-        });
+        });    
     </script>
 </body>
 </html>

@@ -1,5 +1,9 @@
 
-#services:
+services:
+  app:
+    environment:
+      APP_ENV: dev      
+
 ###> doctrine/doctrine-bundle ###
 #  database:
 #    ports:
