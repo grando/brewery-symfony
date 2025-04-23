@@ -35,10 +35,10 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html
 
 # Install PHP dependencies
-RUN composer install 
-RUN php bin/console doctrine:database:create --no-interaction
-RUN php bin/console doctrine:migrations:migrate --no-interaction
-RUN php bin/console doctrine:fixtures:load --no-interaction
+RUN composer install && \
+    php bin/console doctrine:database:create --no-interaction && \
+    php bin/console doctrine:migrations:migrate --no-interaction && \
+    php bin/console doctrine:fixtures:load --no-interaction
 
 # Expose port 80
 EXPOSE 80
